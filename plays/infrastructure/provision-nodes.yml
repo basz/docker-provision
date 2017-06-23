@@ -1,0 +1,17 @@
+- hosts: all
+  gather_facts: false
+
+  tasks:
+
+  # ubuntu16.04 doesn't come with the correct python
+  - name: install python 2
+    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+
+- hosts: all
+  connection: local
+  gather_facts: false
+
+  tasks:
+  - name: docker-machine upgrade
+    shell: "docker-machine upgrade {{ inventory_hostname }}"

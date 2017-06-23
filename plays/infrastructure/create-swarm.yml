@@ -1,0 +1,136 @@
+# https://thisendout.com/2016/09/13/deploying-docker-swarm-with-ansible/
+
+
+# DETECTING GROUPS
+
+# The following play will run this command on each manager node to see if it is currently participating
+# in the cluster and classify them into two groups: operational and bootstrap:
+
+- hosts: manager
+
+  tasks:
+    - name: determine swarm status
+      shell: "docker info 2> /dev/null | grep 'Swarm:' | cut -d ' ' -f2"
+      register: swarm_status
+
+    - name: create swarm_manager_operational group
+      add_host:
+        hostname: "{{ item }}"
+        groups: swarm_manager_operational
+      with_items: "{{ play_hosts }}"
+      when: "'active' in swarm_status.stdout_lines"
+      run_once: true
+
+    - name: create swarm_manager_bootstrap group
+      add_host:
+        hostname: "{{ item }}"
+        groups: swarm_manager_bootstrap
+      with_items: "{{ play_hosts }}"
+      when: "'active' not in swarm_status.stdout_lines"
+      run_once: true
+
+    - name: detected manager (operational)
+      debug: "msg={{ groups.swarm_manager_operational | default('none') }}"
+
+    - name: detected manager (bootstrap)
+      debug: "msg={{ groups.swarm_manager_bootstrap | default('none') }}"
+
+# Next, we are going to do the exact same thing for the worker hosts:
+
+- hosts: workers
+
+  tasks:
+    - name: determine swarm status
+      shell: "docker info 2> /dev/null | grep 'Swarm:' | cut -d ' ' -f2"
+      register: swarm_status
+
+    - name: create swarm_worker_operational group
+      add_host:
+        hostname: "{{ item }}"
+        groups: swarm_worker_operational
+      with_items: "{{ ansible_play_batch }}"
+      when: "'active' in swarm_status.stdout_lines"
+      run_once: true
+
+    - name: create swarm_worker_bootstrap group
+      add_host:
+        hostname: "{{ item }}"
+        groups: swarm_worker_bootstrap
+      with_items: "{{ ansible_play_batch }}"
+      when: "'active' not in swarm_status.stdout_lines"
+      run_once: true
+
+    - name: detected workers (operational)
+      debug: "msg={{ groups.swarm_worker_operational | default('none') }}"
+
+    - name: detected workers (bootstrap)
+      debug: "msg={{ groups.swarm_worker_bootstrap | default('none') }}"
+
+# OPTIONALLY BOOTSTRAP A CLUSTER
+#
+# When all of the managers are not running in Swarm mode (Swarm: inactive), then a new cluster needs to be created.
+# The init command only needs to be run once on a single node. If you try and run it again in an active cluster,
+# it will fail as the node is already running in Swarm mode.
+
+- hosts: swarm_manager_bootstrap[0]
+
+  vars:
+    - manager_ip: "{{ hostvars[groups.swarm_manager_bootstrap[0]]['ansible_host'] }}"
+
+  tasks:
+    - name: initialize swarm cluster
+      shell: docker swarm init --advertise-addr={{ manager_ip }}:2377
+      when: "'swarm_manager_operational' not in groups"
+      register: bootstrap_first_node
+
+    - name: add initialized host to swarm_manager_operational group
+      add_host:
+        hostname: "{{ ansible_play_batch[0] }}"
+        groups: swarm_manager_operational
+      when: bootstrap_first_node | changed
+
+
+
+# RETRIEVE THE JOIN TOKENS
+#
+# The next play also only targets a single node in the swarm_manager_operational group to retrieve and register
+# the manager and worker tokens required when joining a node to the cluster. Later in the playbook, we will need
+# easy access to the IP address of one of the manager hosts, so we can store that information by creating another
+# ad hoc group with just the manager’s IP (there are certainly other ways of storing and accessing a single
+# manager’s IP address, I just think this is easier).
+
+- hosts: swarm_manager_operational[0]
+
+  tasks:
+    - name: retrieve swarm manager token
+      shell: docker swarm join-token -q manager
+      register: swarm_manager_token
+
+    - name: retrieve swarm worker token
+      shell: docker swarm join-token -q worker
+      register: swarm_worker_token
+
+    - name: populate list of manager ips
+      add_host:
+        hostname: "{{ hostvars[item].ansible_host }}"
+        groups: swarm_manager_ips
+      with_items: "{{ ansible_play_batch }}"
+
+
+# JOIN MANAGER NODES
+#
+# The manager hosts that are not running in Swarm mode (swarm_manager_bootstrap group) will now be added to the cluster using the Swarm manager token.
+
+- hosts: swarm_manager_bootstrap:!swarm_manager_operational
+
+  vars:
+    token: "{{ hostvars[groups['swarm_manager_operational'][0]]['swarm_manager_token']['stdout'] }}"
+
+  tasks:
+    - name: token
+      debug: "msg={{ hostvars }}"
+
+    - name: join manager nodes to cluster
+      shell: >
+        docker swarm join --token={{ token }}
+        {{ groups['swarm_manager_ips'][0] }}:2377
