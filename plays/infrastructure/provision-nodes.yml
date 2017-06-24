@@ -7,6 +7,24 @@
   - name: install python 2
     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
 
+#  - name: install pip
+#    apt:
+#      name: python-pip python-dev build-essential
+
+  - name: apt | make sure the required packages are installed
+    apt:
+      pkg: "{{item}}"
+      state: present
+    with_items:
+      - python-pip
+      - python-dev
+      - build-essential
+
+  # https://github.com/docker/docker-py
+  - name: install docker-py
+    pip:
+      name: docker
+
 
 - hosts: all
   connection: local
@@ -15,3 +33,4 @@
   tasks:
   - name: docker-machine upgrade
     shell: "docker-machine upgrade {{ inventory_hostname }}"
+
