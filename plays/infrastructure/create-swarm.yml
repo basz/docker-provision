@@ -18,7 +18,7 @@
         hostname: "{{ item }}"
         groups: swarm_manager_operational
       with_items: "{{ play_hosts }}"
-      when: "'{{ hostvars[item]['docker_info']['Swarm']['LocalNodeState'] }}' == 'active'"
+      when: hostvars[item]['docker_info']['Swarm']['LocalNodeState'] == 'active'
       run_once: true
 
     - name: create swarm_manager_bootstrap group
@@ -26,7 +26,7 @@
         hostname: "{{ item }}"
         groups: swarm_manager_bootstrap
       with_items: "{{ play_hosts }}"
-      when: "'{{ hostvars[item]['docker_info']['Swarm']['LocalNodeState'] }}' != 'active'"
+      when: hostvars[item]['docker_info']['Swarm']['LocalNodeState'] != 'active'
       run_once: true
 
     - name: detected manager (operational)
@@ -49,7 +49,7 @@
         hostname: "{{ item }}"
         groups: swarm_worker_operational
       with_items: "{{ ansible_play_batch }}"
-      when: "'{{ hostvars[item]['docker_info']['Swarm']['LocalNodeState'] }}' == 'active'"
+      when: hostvars[item]['docker_info']['Swarm']['LocalNodeState'] == 'active'
       run_once: true
 
     - name: create swarm_worker_bootstrap group
@@ -57,7 +57,7 @@
         hostname: "{{ item }}"
         groups: swarm_worker_bootstrap
       with_items: "{{ ansible_play_batch }}"
-      when: "'{{ hostvars[item]['docker_info']['Swarm']['LocalNodeState'] }}' == 'active'"
+      when: hostvars[item]['docker_info']['Swarm']['LocalNodeState'] != 'active'
       run_once: true
 
     - name: detected workers (operational)
@@ -80,7 +80,7 @@
   tasks:
     - name: initialize swarm cluster
       shell: docker swarm init --advertise-addr={{ manager_ip }}:2377
-      when: "'swarm_manager_operational' not in groups"
+      when: "groups['swarm_manager_operational'] is undefined"
       register: bootstrap_first_node
 
     - name: add initialized host to swarm_manager_operational group
@@ -134,3 +134,23 @@
       shell: >
         docker swarm join --token={{ token }}
         {{ groups['swarm_manager_ips'][0] }}:2377
+
+
+
+# JOIN WORKER NODES
+#
+# The final play looks very similar to the previous, except targeting the worker nodes and joining using the worker token.
+
+- hosts: swarm_worker_bootstrap:!swarm_worker_operational
+
+  vars:
+    token: "{{ hostvars[groups['swarm_manager_operational'][0]]['swarm_worker_token']['stdout'] }}"
+    manager_ip: "{{ hostvars[groups.swarm_manager_operational[0]]['ansible_host'] | default('none') }}"
+
+  tasks:
+
+    - name: join worker nodes to cluster
+      shell: >
+        docker swarm join --token={{ token }} --advertise-addr={{ manager_ip }}:2377
+        {{ groups['swarm_manager_ips'][0] }}:2377
+      when: manager_ip != 'none'

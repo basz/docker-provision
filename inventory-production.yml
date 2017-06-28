@@ -1,11 +1,5 @@
 [manager]
-node-1 ansible_port=22 ansible_host=146.185.159.169 ansible_ssh_user=root ansible_ssh_pipelining=true ansible_ssh_private_key_file=/Users/bas/.docker/machine/machines/node-1/id_rsa
+node-1 ansible_port=22 ansible_host=188.226.160.144 ansible_ssh_user=root ansible_ssh_pipelining=true ansible_ssh_private_key_file=~/.docker/machine/machines/node-1/id_rsa
 
 [workers]
-node-2 ansible_port=22 ansible_host=146.185.169.207 ansible_ssh_user=root ansible_ssh_pipelining=true ansible_ssh_private_key_file=/Users/bas/.docker/machine/machines/node-2/id_rsa
-
-# the groups are here so they are initialized empty
-#[swarm_manager_operational]
-#[swarm_manager_bootstrap]
-#[swarm_worker_operational]
-#[swarm_worker_bootstrap]
+node-2 ansible_port=22 ansible_host=188.226.157.182 ansible_ssh_user=root ansible_ssh_pipelining=true ansible_ssh_private_key_file=~/.docker/machine/machines/node-2/id_rsa

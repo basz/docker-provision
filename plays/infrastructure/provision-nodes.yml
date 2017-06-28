@@ -1,3 +1,17 @@
+
+- hosts: all
+  gather_facts: false
+  connection: local
+
+  tasks:
+
+  - name: accept new ssh fingerprints
+    shell: ssh-keyscan -t rsa {{ item }} >> ~/.ssh/known_hosts
+    with_items: "{{ hostvars[inventory_hostname]['ansible_host'] }}"
+
+
+
+
 - hosts: all
   gather_facts: false
 
@@ -7,13 +21,9 @@
   - name: install python 2
     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
 
-#  - name: install pip
-#    apt:
-#      name: python-pip python-dev build-essential
-
   - name: apt | make sure the required packages are installed
     apt:
-      pkg: "{{item}}"
+      pkg: "{{ item }}"
       state: present
     with_items:
       - python-pip
@@ -21,9 +31,13 @@
       - build-essential
 
   # https://github.com/docker/docker-py
-  - name: install docker-py
+  - name: install docker python module
     pip:
-      name: docker
+      name: "{{ item }}"
+      state: present
+    with_items:
+      - docker-compose
+      - docker
 
 
 - hosts: all
@@ -31,6 +45,7 @@
   gather_facts: false
 
   tasks:
+
   - name: docker-machine upgrade
     shell: "docker-machine upgrade {{ inventory_hostname }}"
 

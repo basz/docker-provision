@@ -1,0 +1,30 @@
+version: '3.1'
+
+services:
+
+  main:
+    image: vfarcic/go-demo
+    environment:
+      - DB=db
+    networks:
+      - proxy
+      - go-demo
+    deploy:
+      replicas: 2
+      labels:
+        - com.df.notify=true
+        - com.df.distribute=true
+        - com.df.servicePath=/demo
+        - com.df.port=8080
+        #- com.df.serviceDomain=hello-world.bushbaby.nl
+
+  db:
+    image: mongo
+    networks:
+      - go-demo
+
+networks:
+  go-demo:
+    external: false
+  proxy:
+    external: true

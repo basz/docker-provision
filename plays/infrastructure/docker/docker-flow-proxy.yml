@@ -1,0 +1,44 @@
+version: "3.1"
+
+services:
+
+  proxy:
+    image: vfarcic/docker-flow-proxy
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - proxy
+    environment: # http://proxy.dockerflow.com/config/
+      - LISTENER_ADDRESS=swarm-listener
+      - MODE=swarm
+#      - DEBUG=false
+#      - DEBUG_ERRORS_ONLY=true
+    deploy:
+      replicas: 2
+    secrets:                    # secrets block only for 'web' service
+     - dfp_stats_user
+     - dfp_stats_pass
+
+  swarm-listener:
+    image: vfarcic/docker-flow-swarm-listener
+    networks:
+      - proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DF_NOTIFY_CREATE_SERVICE_URL=http://proxy:8080/v1/docker-flow-proxy/reconfigure
+      - DF_NOTIFY_REMOVE_SERVICE_URL=http://proxy:8080/v1/docker-flow-proxy/remove
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  proxy:
+    external: true
+
+secrets:
+  dfp_stats_user:
+    external: true
+  dfp_stats_pass:
+    external: true
