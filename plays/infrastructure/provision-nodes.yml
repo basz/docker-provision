@@ -29,9 +29,15 @@
       - docker
       - docker-ce
 
-  - name: apt | install aptitude
+  - name: apt | install aptitude and pip
     apt:
-      name: aptitude
+      pkg: "{{ item }}"
+      state: present
+    with_items:
+      - aptitude
+      - python-pip
+      - python-dev
+      - build-essential
 
   - name: apt | adding docker APT key
     apt_key:
@@ -46,7 +52,7 @@
     apt:
       upgrade: yes
       update_cache: yes
-      cache_valid_time: 0
+      cache_valid_time: 3600
       autoclean: yes
       autoremove: yes
 
@@ -77,23 +83,23 @@
     local_action: wait_for host={{ ansible_ssh_host }} state=started port=22 delay=1 timeout=300
     when: reboot.stat.exists
 
-#  - shell: pip install --upgrade pip
+  - shell: pip install --upgrade pip
+
+  # https://github.com/docker/docker-py
+  - name: install docker python modules
+    pip:
+      name: "{{ item }}"
+      state: present
+    with_items:
+      - docker-compose
+      - docker
+
+#- hosts: all
+#  connection: local
+#  gather_facts: false
 #
-#  # https://github.com/docker/docker-py
-#  - name: install docker python module
-#    pip:
-#      name: "{{ item }}"
-#      state: present
-#    with_items:
-#      - docker-compose
-#      - docker-ce17.03.2
-
-- hosts: all
-  connection: local
-  gather_facts: false
-
-  tasks:
-
+#  tasks:
+#
 #  - name: docker-machine upgrade
 #    shell: "docker-machine upgrade {{ inventory_hostname }}"
 
