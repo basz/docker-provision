@@ -8,23 +8,25 @@ services:
       - DB=db
     networks:
       - proxy
-      - go-demo
+      - hello-world
     deploy:
       replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
       labels:
         - com.df.notify=true
         - com.df.distribute=true
-        - com.df.servicePath=/demo
+        - com.df.serviceDomain=hello-world.bushbaby.nl
         - com.df.port=8080
-        #- com.df.serviceDomain=hello-world.bushbaby.nl
 
   db:
     image: mongo
     networks:
-      - go-demo
+      - hello-world
 
 networks:
-  go-demo:
+  hello-world:
     external: false
   proxy:
     external: true
