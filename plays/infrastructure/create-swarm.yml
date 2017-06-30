@@ -79,7 +79,7 @@
 
   tasks:
     - name: initialize swarm cluster
-      shell: docker swarm init --advertise-addr={{ manager_ip }}:2377
+      shell: docker swarm init --advertise-addr={{ manager_ip }} --listen-addr {{ manager_ip }}:2377
       when: "groups['swarm_manager_operational'] is undefined"
       register: bootstrap_first_node
 
