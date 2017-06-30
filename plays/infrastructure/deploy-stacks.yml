@@ -5,35 +5,15 @@
     - name: Create a 'proxy' network
       local_action: shell docker network create --driver=overlay proxy
       ignore_errors: yes
-      ##docker network create --driver=overlay proxy
 
-    - name: synchronize docker-compose stack
-      synchronize:
-        src: docker
-        dest: /tmp
-        delete: yes
-        recursive: yes
-        owner: no
-        group: no
-
-#    - name: deploy stack
-#      docker_service:
-#        project_name: docker-flow-proxy
-#        project_src: "/tmp/docker"
-#        files:
-#          - "docker-flow-proxy.yml"
-#
     - name: secrets
-      shell: >
-        echo "user" | docker secret create dfp_stats_user - && \
+      local_action: >
+        shell echo "user" | docker secret create dfp_stats_user - && \
         echo "pass" | docker secret create dfp_stats_pass -
       ignore_errors: yes
 
     - name: deploy stack 'docker-flow-proxy'
-      shell: docker stack deploy -c /tmp/docker/docker-flow-proxy.yml proxy
-
-#    - name: deploy stack hello-world
-#      shell: docker stack deploy -c /tmp/docker/hello-world.yml hello-world-bushbaby
+      local_action: shell docker stack deploy --compose-file ./docker/docker-flow-proxy.yml proxy
 
     - name: deploy stack 'stack-hello-world'
-      shell: docker stack deploy -c /tmp/docker/stack-hello-world.yml hello-world
+      local_action: shell docker stack deploy --compose-file ./docker/stack-hello-world.yml hello-world
