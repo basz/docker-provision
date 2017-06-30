@@ -6,7 +6,7 @@
   tasks:
 
   - name: accept new ssh fingerprints
-    shell: ssh-keyscan -t rsa {{ item }} >> ~/.ssh/known_hosts
+    shell: ssh-keygen -R  {{ item }} && sleep 1 && ssh-keyscan -t rsa {{ item }} >> ~/.ssh/known_hosts
     with_items: "{{ hostvars[inventory_hostname]['ansible_host'] }}"
 
 
@@ -73,8 +73,8 @@
     register: reboot
 
   - name: restart machine
-    command: shutdown -r now "ansible updates triggered"
-    async: 5
+    command: reboot
+    async: 0
     poll: 0
     ignore_errors: true
     when: reboot.stat.exists
