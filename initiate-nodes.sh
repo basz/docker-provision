@@ -54,4 +54,5 @@ wait
 #done
 
 docker-machine ls
+eval $(docker-machine env node-1)
 docker-machine env node-1
